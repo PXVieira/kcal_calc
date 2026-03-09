@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KcalCalc - Registro de Treinos</title>
+    <!-- Fontes do Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Ícones RemixIcon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- CSS PRÓPRIO -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+</head>
+
+<body>
+    <div id="app-container">
+        <!-- Banner Offline -->
+        <div id="offline-banner" class="offline-banner">
+            <i class="ri-wifi-off-line"></i> Modo offline ativo - Seus dados serão salvos localmente
+        </div>
+
+        <!-- VIEW: LOGIN -->
+        <section id="login-view" class="view active">
+            <div class="login-container">
+                <div class="logo-box">
+                    <i class="ri-fire-fill logo-icon"></i>
+                    <h1>KcalCalc</h1>
+                </div>
+                <p class="subtitle">Seu registro inteligente de treinos e calorias consumidas.</p>
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" id="email" placeholder="seu@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+                <div id="auth-error" class="text-danger text-center mt-1" style="display: none; font-size: 0.9rem;">
+                </div>
+
+                <button class="btn btn-primary btn-large w-100 mt-2" onclick="signIn()">Entrar</button>
+                <button class="btn btn-outline btn-large w-100 mt-1" onclick="signUp()">Criar Nova Conta</button>
+            </div>
+        </section>
+
+        <!-- VIEW: DASHBOARD -->
+        <section id="dashboard-view" class="view">
+            <header class="app-header">
+                <div class="header-content">
+                    <div>
+                        <h2>Olá, Atleta 👋</h2>
+                        <p>Pronto para o treino de hoje?</p>
+                    </div>
+                    <div class="avatar-placeholder" onclick="navigate('profile')">
+                        <i class="ri-user-fill"></i>
+                    </div>
+                </div>
+            </header>
+            <main class="page-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon kcal"><i class="ri-fire-line"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-kcal-week">0</span>
+                            <span class="stat-label">Kcal Torradas</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon time"><i class="ri-timer-line"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-workouts-week">0</span>
+                            <span class="stat-label">Treinos/Semana</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Ação Rápida</h3>
+                <div class="action-card" onclick="navigate('create-workout')">
+                    <div class="action-content">
+                        <h4>Criar Ficha de Treino</h4>
+                        <p>Monte seu treino personalizado</p>
+                    </div>
+                    <button class="btn-icon"><i class="ri-add-line"></i></button>
+                </div>
+
+                <div class="action-card mt-1" onclick="navigate('new-workout')"
+                    style="background: linear-gradient(135deg, var(--surface-color) 0%, #1e293b 100%); border-color: rgba(59, 130, 246, 0.3);">
+                    <div class="action-content">
+                        <h4>Registrar Treino Realizado</h4>
+                        <p>Calcule calorias gastas agora</p>
+                    </div>
+                    <button class="btn-icon" style="background-color: #3B82F6;"><i class="ri-check-line"></i></button>
+                </div>
+
+                <h3 class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    Últimos Treinos
+                    <span style="font-size: 0.8rem; color: var(--primary-color); cursor: pointer;"
+                        onclick="navigate('history', document.querySelectorAll('.nav-item')[1])">Ver todos</span>
+                </h3>
+                <div class="workout-list" id="dash-recent-workouts">
+                    <!-- Treinos Recentes via JS -->
+                    <div class="text-center text-muted" style="margin-top: 1rem; font-size: 0.9rem;">Carregando...</div>
+                </div>
+            </main>
+        </section>
+
+        <!-- VIEW: NOVO TREINO -->
+        <section id="new-workout-view" class="view">
+            <header class="app-header minimal">
+                <button class="btn-back" onclick="navigate('dashboard')"><i class="ri-arrow-left-s-line"></i></button>
+                <h2>Novo Treino</h2>
+            </header>
+            <main class="page-content">
+                <div class="form-card card">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Treino de Força (Musculação)</h4>
+
+                    <div class="form-group">
+                        <label>Duração do Treino (min)</label>
+                        <input type="number" id="workout-duration" placeholder="Ex: 60" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Volume Total Levantado (kg)</label>
+                        <input type="number" id="workout-volume" placeholder="Ex: 4500" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-card card mt-1">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Cardio (Opcional)</h4>
+
+                    <div class="form-group">
+                        <label>Distância (km)</label>
+                        <input type="number" step="0.1" id="workout-cardio-dist" placeholder="Ex: 3.5"
+                            class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tempo (min)</label>
+                        <input type="number" id="workout-cardio-time" placeholder="Ex: 20" class="form-control">
+                    </div>
+                </div>
+
+                <!-- Resultado Card -->
+                <div id="workout-result-card" class="card mt-2 text-center"
+                    style="display: none; border: 1px solid var(--primary-color); background: rgba(16, 185, 129, 0.05);">
+                    <h4 style="color: var(--primary-color); font-size: 1.1rem; margin-bottom: 1rem;">Resultado do Treino
+                    </h4>
+
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                        <span style="color: var(--text-muted);">Calorias Musculação:</span>
+                        <span style="font-weight: 600;"><span id="kcal-musculacao">0</span> kcal</span>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                        <span style="color: var(--text-muted);">Calorias Cardio:</span>
+                        <span style="font-weight: 600;"><span id="kcal-cardio">0</span> kcal</span>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 0.95rem; border-bottom: 1px solid var(--surface-light); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-muted);">Total (Sem Afterburn):</span>
+                        <span style="font-weight: 600;"><span id="kcal-total">0</span> kcal</span>
+                    </div>
+
+                    <h4 style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">Gasto Total (+
+                        Afterburn 8%)</h4>
+                    <div style="font-size: 3rem; font-weight: 700; color: var(--primary-color);">
+                        <span id="workout-kcal-result">0</span> <span style="font-size: 1.2rem;">kcal</span>
+                    </div>
+
+                    <div id="workout-feedback" style="font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-muted);">
+                        Ótimo trabalho!</div>
+                </div>
+
+                <button class="btn btn-outline btn-large w-100 mt-2" onclick="calculateKcalWorkout()">Calcular
+                    Calorias</button>
+                <button id="btn-save-workout" class="btn btn-primary btn-large w-100 mt-1" onclick="saveWorkout()"
+                    style="display: none;">Salvar Treino</button>
+
+                <div id="workout-message" class="text-center mt-1" style="display: none; font-size: 0.9rem;"></div>
+            </main>
+        </section>
+
+        <!-- VIEW: HISTÓRICO -->
+        <section id="history-view" class="view">
+            <header class="app-header">
+                <h2>Histórico</h2>
+                <p>Veja seus resultados anteriores</p>
+            </header>
+            <main class="page-content">
+                <div class="month-filter">
+                    <button class="btn-chip active">Esta Semana</button>
+                    <button class="btn-chip">Este Mês</button>
+                    <button class="btn-chip">Todos</button>
+                </div>
+                <div class="workout-list mt-2" id="history-workout-list">
+                    <!-- Treinos serão carregados aqui via JS -->
+                    <div class="text-center text-muted" style="margin-top: 2rem;">Carregando histórico...</div>
+                </div>
+            </main>
+        </section>
+
+        <!-- VIEW: DETALHES DO TREINO -->
+        <section id="workout-details-view" class="view">
+            <header class="app-header minimal">
+                <button class="btn-back" onclick="navigate('history')"><i class="ri-arrow-left-s-line"></i></button>
+                <h2>Detalhes do Treino</h2>
+            </header>
+            <main class="page-content">
+                <div class="workout-details-card card text-center mb-2">
+                    <h3 id="detail-date" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                        Data do Treino</h3>
+                    <div style="font-size: 3rem; font-weight: 700; color: var(--primary-color);">
+                        <span id="detail-kcal-total">0</span> <span style="font-size: 1.2rem;">kcal</span>
+                    </div>
+                </div>
+
+                <div class="form-card card">
+                    <div
+                        style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--surface-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        <span class="text-muted">Duração Total</span>
+                        <span style="font-weight: 600;"><span id="detail-duration">0</span> min</span>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--surface-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        <span class="text-muted">Volume de Carga</span>
+                        <span style="font-weight: 600;"><span id="detail-volume">0</span> kg</span>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--surface-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        <span class="text-muted">Distância Cardio</span>
+                        <span style="font-weight: 600;"><span id="detail-cardio-dist">0</span> km</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span class="text-muted">Tempo Cardio</span>
+                        <span style="font-weight: 600;"><span id="detail-cardio-time">0</span> min</span>
+                    </div>
+                </div>
+
+                <div class="form-card card mt-1">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">Breakdown de Calorias</h4>
+                    <div
+                        style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--surface-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        <span class="text-muted">Musculação</span>
+                        <span style="font-weight: 600;"><span id="detail-kcal-musculacao">0</span> kcal</span>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--surface-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        <span class="text-muted">Cardio</span>
+                        <span style="font-weight: 600;"><span id="detail-kcal-cardio">0</span> kcal</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="text-muted">EPOC (Afterburn)</span>
+                        <span style="font-weight: 600;">+ 8%</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-outline text-danger w-100 mt-2" onclick="deleteWorkout()"
+                    style="border-color: var(--danger-color); color: var(--danger-color);">Excluir Registro</button>
+            </main>
+        </section>
+
+        <!-- VIEW: CRIAR TREINO (NOVA FICHA) -->
+        <section id="create-workout-view" class="view">
+            <header class="app-header minimal">
+                <button class="btn-back" onclick="navigate('dashboard')"><i class="ri-arrow-left-s-line"></i></button>
+                <h2>Criar Treino</h2>
+            </header>
+            <main class="page-content">
+                <div class="form-group mb-2">
+                    <label>Nome do Treino</label>
+                    <input type="text" id="routine-name" placeholder="Ex: Treino A - Costas e Bíceps"
+                        class="form-control">
+                </div>
+
+                <div class="section-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 class="section-title" style="margin: 0;">Exercícios</h3>
+                    <button class="btn btn-outline btn-small" onclick="navigate('exercise-search')"
+                        style="border-color: var(--primary-color); color: var(--primary-color);"><i
+                            class="ri-add-line"></i> Adicionar</button>
+                </div>
+
+                <div id="routine-exercise-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Exercícios escolhidos via API renderizam aqui -->
+                    <div class="text-center text-muted" id="routine-empty-state"
+                        style="margin-top: 1rem; padding: 2rem 0; border: 1px dashed var(--surface-light); border-radius: var(--card-radius);">
+                        <i class="ri-file-list-3-line"
+                            style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: var(--surface-light)"></i>
+                        Nenhum exercício adicionado.<br>Clique em "Adicionar" para buscar.
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100 mt-2" onclick="saveRoutine()" style="display: none;"
+                    id="btn-save-routine">Salvar Ficha de Treino</button>
+            </main>
+        </section>
+
+        <!-- VIEW: BUSCA DE EXERCÍCIOS API -->
+        <!-- VIEW: BUSCA DE EXERCÍCIOS API -->
+        <section id="exercise-search-view" class="view">
+            <header class="app-header minimal">
+                <button class="btn-back" onclick="navigate('create-workout')"><i
+                        class="ri-arrow-left-s-line"></i></button>
+                <h2 style="flex: 1;">Buscar API</h2>
+                <button class="btn btn-primary btn-small" onclick="navigate('create-workout')" id="btn-finish-search"
+                    style="display: none;">Concluir <span id="search-badge-count"
+                        style="margin-left: 0.3rem; background: #fff; color: var(--primary-color); border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">0</span></button>
+            </header>
+            <main class="page-content">
+                <div class="form-group" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="text" id="exercise-search-input" placeholder="Termo em inglês (ex: squat, bench)"
+                        class="form-control" style="margin-bottom: 0;">
+                    <button class="btn btn-primary" onclick="handleExerciseSearch()"
+                        style="height: 56px; padding: 0 1.5rem;"><i class="ri-search-line"></i></button>
+                </div>
+
+                <div id="exercise-results" class="mt-2" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="text-center text-muted" style="margin-top: 2rem;">
+                        <i class="ri-search-eye-line"
+                            style="font-size: 2.5rem; color: var(--surface-light); margin-bottom: 0.5rem; display: block;"></i>
+                        Digite um termo para buscar (inglês recomendado).
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- VIEW: PERFIL -->
+        <section id="profile-view" class="view">
+            <header class="app-header">
+                <h2>Seu Perfil</h2>
+            </header>
+            <main class="page-content">
+                <div class="profile-header card">
+                    <div class="avatar-large"><i class="ri-user-fill"></i></div>
+                    <h3 id="profile-email-display">Carregando...</h3>
+                </div>
+
+                <div class="form-card card mt-2" id="profile-form">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Dados Corporais</h4>
+
+                    <div class="form-group">
+                        <label>Idade</label>
+                        <input type="number" id="profile-idade" placeholder="Ex: 28" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sexo</label>
+                        <select id="profile-sexo" class="form-control">
+                            <option value="" disabled selected>Selecione</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Feminino</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Altura (cm)</label>
+                        <input type="number" id="profile-altura" placeholder="Ex: 175" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Peso (kg)</label>
+                        <input type="number" step="0.1" id="profile-peso" placeholder="Ex: 75.5" class="form-control"
+                            oninput="calculateMassaMagra()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gordura Corporal (%)</label>
+                        <input type="number" step="0.1" id="profile-gordura" placeholder="Ex: 15.0" class="form-control"
+                            oninput="calculateMassaMagra()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Massa Magra (kg) - Calculo Automático</label>
+                        <input type="text" id="profile-massa-magra" class="form-control" disabled
+                            style="background-color: rgba(255,255,255,0.05); color: var(--primary-color); font-weight: bold;">
+                    </div>
+
+                    <button class="btn btn-primary btn-large w-100 mt-2" onclick="saveProfile()"
+                        id="btn-save-profile">Salvar Perfil</button>
+                    <div id="profile-message" class="text-center mt-1" style="display: none; font-size: 0.9rem;"></div>
+                </div>
+
+                <div class="settings-list mt-2">
+                    <div id="install-pwa-item" class="settings-item card"
+                        style="display: none; border-color: var(--primary-color);" onclick="installPWA()">
+                        <div class="settings-icon" style="color: var(--primary-color);"><i
+                                class="ri-download-cloud-2-line"></i></div>
+                        <div class="settings-text" style="color: var(--primary-color); font-weight: bold;">Instalar
+                            Aplicativo</div>
+                        <div class="settings-arrow"><i class="ri-arrow-right-s-line"></i></div>
+                    </div>
+                    <div class="settings-item card text-danger" onclick="signOut()">
+                        <div class="settings-icon"><i class="ri-logout-box-r-line"></i></div>
+                        <div class="settings-text">Sair da Conta</div>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- VIEW: PROGRESSO (GRÁFICOS) -->
+        <section id="progress-view" class="view">
+            <header class="app-header">
+                <h2>Progresso</h2>
+            </header>
+            <main class="page-content">
+                <div class="card form-card mb-2">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Evolução de Cargas</h4>
+                    <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
+                        Selecione um exercício que você já realizou para ver seu histórico de peso médio.
+                    </p>
+
+                    <div class="form-group">
+                        <select id="progress-exercise-select" class="form-control" onchange="renderProgressChart()">
+                            <option value="">Carregando exercícios...</option>
+                        </select>
+                    </div>
+
+                    <!-- Container do Gráfico -->
+                    <div style="position: relative; height: 300px; width: 100%; margin-top: 1.5rem;">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+
+                    <div id="progress-empty-state" class="text-center text-muted mt-2"
+                        style="display: none; padding: 2rem 0;">
+                        <i class="ri-bar-chart-2-line" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <p class="mt-1">Nenhum dado encontrado para este exercício.</p>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- VIEW: TREINO ATIVO (CRONÔMETRO) -->
+        <section id="active-workout-view" class="view" style="padding-top: 80px;">
+            <main class="page-content"
+                style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+                <div class="card form-card" style="width: 100%; max-width: 400px; padding: 2rem;">
+                    <i class="ri-fire-fill"
+                        style="font-size: 4rem; color: var(--primary-color); display: block; margin-bottom: 1rem;"></i>
+                    <h3 style="margin-bottom: 0.5rem;">Treino em Andamento</h3>
+                    <p class="text-muted" style="margin-bottom: 2rem;">Seu cronômetro está rodando. Registre suas séries
+                        e, quando finalizar tudo, clique no botão abaixo.</p>
+
+                    <button class="btn btn-primary btn-large w-100" onclick="finishWorkout()"
+                        style="background-color: var(--danger-color); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
+                        <i class="ri-flag-2-line"></i> Finalizar Treino
+                    </button>
+                    <button class="btn btn-outline w-100 mt-1" onclick="navigate('dashboard')">Minimizar Tela</button>
+                </div>
+            </main>
+        </section>
+
+        <!-- BARRA DO CRONÔMETRO GLOBAL (INVISIVEL POR PADRAO) -->
+        <div id="global-workout-timer" class="global-timer-bar">
+            <div class="timer-display-small">
+                <i class="ri-timer-line" style="margin-right:0.5rem; animation: pulse 2s infinite;"></i>
+                <span id="global-timer-text">00:00:00</span>
+            </div>
+            <button class="btn btn-small" onclick="navigate('active-workout')"
+                style="background: rgba(255,255,255,0.2); color:white; border:none;">
+                <i class="ri-fullscreen-line"></i> Ver
+            </button>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav id="bottom-nav" class="bottom-nav hidden">
+            <button class="nav-item active" onclick="navigate('dashboard', this)">
+                <i class="ri-home-5-line"></i><span>Início</span>
+            </button>
+            <button class="nav-item" onclick="navigate('history', this)">
+                <i class="ri-history-line"></i><span>Histórico</span>
+            </button>
+            <button class="nav-item fab" onclick="navigate('new-workout')">
+                <div class="fab-inner"><i class="ri-add-line"></i></div>
+            </button>
+            <button class="nav-item" onclick="navigate('progress', this)">
+                <i class="ri-line-chart-line"></i><span>Progresso</span>
+            </button>
+            <button class="nav-item" onclick="navigate('profile', this)">
+                <i class="ri-user-3-line"></i><span>Perfil</span>
+            </button>
+        </nav>
+
+        <!-- Timer Overlay Modal -->
+        <div id="rest-timer-modal" class="timer-modal" style="display: none;">
+            <div class="timer-content">
+                <i class="ri-timer-flash-line timer-icon"></i>
+                <h3 id="timer-status-text">Descanso</h3>
+                <div class="timer-display" id="timer-display-time">60</div>
+                <button class="btn btn-outline mt-2 w-100" onclick="skipRestTimer()"
+                    style="border-color: rgba(255,255,255,0.2); color: #fff;">Pular Descanso</button>
+            </div>
+        </div>
+
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
