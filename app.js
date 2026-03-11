@@ -12,7 +12,8 @@ if (window.supabase) {
 }
 
 // Navegação (SPA Router Simples)
-const views = ['login', 'dashboard', 'profile', 'new-workout', 'history', 'workout-details', 'create-workout', 'exercise-search', 'progress', 'active-workout'];
+const views = ['login', 'dashboard', 'profile', 'new-workout', 'history', 'workout-details'];
+
 const bottomNav = document.getElementById('bottom-nav');
 
 function navigate(viewId, navElement = null) {
@@ -46,8 +47,7 @@ function navigate(viewId, navElement = null) {
         navItems.forEach(item => item.classList.remove('active'));
         if (viewId === 'dashboard') navItems[0].classList.add('active');
         if (viewId === 'history') navItems[1].classList.add('active');
-        if (viewId === 'progress') navItems[3].classList.add('active');
-        if (viewId === 'profile') navItems[4].classList.add('active');
+        if (viewId === 'profile') navItems[2].classList.add('active');
     }
 
     // Dispara gatilhos de carregamento ao trocar de tela
@@ -55,10 +55,9 @@ function navigate(viewId, navElement = null) {
         loadHistory();
     } else if (viewId === 'dashboard') {
         loadDashboard();
-    } else if (viewId === 'progress') {
-        loadProgressExercises();
     }
 }
+
 
 // Funções de Autenticação Supabase
 
@@ -169,6 +168,9 @@ async function loadProfile(user) {
     const emailDisplay = document.getElementById('profile-email-display');
     if (emailDisplay) emailDisplay.textContent = user.email;
 
+    const nameDisplay = document.getElementById('profile-name-display');
+    if (nameDisplay) nameDisplay.textContent = user.email.split('@')[0]; // Fallback inicial
+
     // Buscar perfil do banco
     const { data, error } = await supabaseClient
         .from('user_profiles')
@@ -182,6 +184,18 @@ async function loadProfile(user) {
     }
 
     if (data) {
+        if (data.nome_completo) {
+            document.getElementById('profile-nome').value = data.nome_completo;
+            document.getElementById('profile-name-display').textContent = data.nome_completo;
+            const welcomeMsg = document.getElementById('welcome-message');
+            if (welcomeMsg) welcomeMsg.textContent = `Olá, ${data.nome_completo.split(' ')[0]} 👋`;
+        }
+        
+        if (data.avatar_url) {
+            document.getElementById('profile-avatar-url').value = data.avatar_url;
+            updateAvatarUI(data.avatar_url);
+        }
+
         if (data.idade) document.getElementById('profile-idade').value = data.idade;
         if (data.sexo) document.getElementById('profile-sexo').value = data.sexo;
         if (data.altura) document.getElementById('profile-altura').value = data.altura;
@@ -192,6 +206,23 @@ async function loadProfile(user) {
     }
 }
 
+function updateAvatarUI(url) {
+    const headerAvatar = document.getElementById('header-avatar');
+    const profileAvatar = document.getElementById('profile-avatar-display');
+    
+    if (url) {
+        const imgHeader = `<img src="${url}" alt="Avatar">`;
+        const imgProfile = `<img src="${url}" alt="Avatar">`;
+        
+        if (headerAvatar) headerAvatar.innerHTML = imgHeader;
+        if (profileAvatar) profileAvatar.innerHTML = imgProfile;
+    } else {
+        const icon = '<i class="ri-user-fill"></i>';
+        if (headerAvatar) headerAvatar.innerHTML = icon;
+        if (profileAvatar) profileAvatar.innerHTML = icon;
+    }
+}
+
 async function saveProfile() {
     const msgDiv = document.getElementById('profile-message');
     msgDiv.style.display = 'none';
@@ -199,6 +230,8 @@ async function saveProfile() {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
     if (!session) return;
 
+    const nome_completo = document.getElementById('profile-nome').value || null;
+    const avatar_url = document.getElementById('profile-avatar-url').value || null;
     const idade = parseInt(document.getElementById('profile-idade').value) || null;
     const sexo = document.getElementById('profile-sexo').value || null;
     const altura = parseFloat(document.getElementById('profile-altura').value) || null;
@@ -208,6 +241,8 @@ async function saveProfile() {
 
     const profileData = {
         user_id: session.user.id,
+        nome_completo,
+        avatar_url,
         idade,
         sexo,
         altura,
@@ -230,6 +265,15 @@ async function saveProfile() {
         msgDiv.className = "text-center mt-1";
         msgDiv.style.color = "var(--primary-color)";
         msgDiv.textContent = "Perfil salvo com sucesso!";
+        
+        // Atualiza a UI imediatamente
+        if (nome_completo) {
+            document.getElementById('profile-name-display').textContent = nome_completo;
+            const welcomeMsg = document.getElementById('welcome-message');
+            if (welcomeMsg) welcomeMsg.textContent = `Olá, ${nome_completo.split(' ')[0]} 👋`;
+        }
+        updateAvatarUI(avatar_url);
+
         setTimeout(() => msgDiv.style.display = 'none', 3000);
     }
 }
@@ -462,7 +506,9 @@ function renderHistory(workouts) {
     });
 }
 
+
 function openWorkoutDetails(id) {
+
     selectedWorkoutId = id;
     const workout = globalWorkouts.find(w => w.id === id);
     if (!workout) return;
@@ -607,576 +653,8 @@ async function renderDashboardRecentWorkouts(userId) {
     });
 }
 
-// ==== LÓGICA DA EXERCISEDB API ====
-const EXERCISEDB_API_KEY = 'b1a9301325msh6394f09af46857ap1527acjsn817f04a886e5';
-const EXERCISEDB_HOST = 'exercisedb.p.rapidapi.com';
 
-async function handleExerciseSearch() {
-    const query = document.getElementById('exercise-search-input').value.trim().toLowerCase();
-    const resultsContainer = document.getElementById('exercise-results');
 
-    if (!query) {
-        resultsContainer.innerHTML = '<div class="text-center text-muted" style="margin-top: 2rem;"><i class="ri-error-warning-line" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>Por favor, digite um termo.</div>';
-        return;
-    }
-
-    resultsContainer.innerHTML = '<div class="text-center text-muted" style="margin-top: 2rem;"><i class="ri-loader-4-line ri-spin" style="font-size: 2.5rem; color: var(--primary-color); display: inline-block;"></i><br><br>Buscando exercícios...</div>';
-
-    try {
-        const url = `https://exercisedb.p.rapidapi.com/exercises/name/${query}?limit=10`;
-        const options = {
-            method: 'GET',
-            headers: {
-                'X-RapidAPI-Key': EXERCISEDB_API_KEY,
-                'X-RapidAPI-Host': EXERCISEDB_HOST
-            }
-        };
-
-        const response = await fetch(url, options);
-
-        if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                throw new Error("API Key inválida ou não configurada.");
-            }
-            throw new Error(`Erro na API: Código ${response.status}`);
-        }
-
-        const data = await response.json();
-        renderExerciseResults(data);
-
-    } catch (error) {
-        console.error("Erro na busca de exercícios:", error);
-        resultsContainer.innerHTML = `
-            <div class="text-center text-danger" style="margin-top: 2rem; background: rgba(239, 68, 68, 0.1); padding: 1.5rem; border-radius: var(--card-radius);">
-                <i class="ri-alert-line" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-                <strong>Falha na Busca</strong><br>
-                <small style="opacity: 0.8;">${error.message}</small><br><br>
-                <small style="color: var(--text-muted);">Verifique se a variável EXERCISEDB_API_KEY foi preenchida no app.js</small>
-            </div>`;
-    }
-}
-
-function renderExerciseResults(exercises) {
-    const resultsContainer = document.getElementById('exercise-results');
-    resultsContainer.innerHTML = '';
-
-    if (!exercises || exercises.length === 0) {
-        resultsContainer.innerHTML = '<div class="text-center text-muted" style="margin-top: 2rem;">Nenhum exercício encontrado com esse termo.</div>';
-        return;
-    }
-
-    exercises.forEach(ex => {
-        const card = document.createElement('div');
-        card.className = 'exercise-card';
-
-        // Sanitize name parameter for onclick
-        const safeName = ex.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-        card.innerHTML = `
-            <img src="${ex.gifUrl}" alt="${ex.name}" class="exercise-gif" loading="lazy" onerror="this.src='https://placehold.co/400x200/1E293B/94A3B8?text=Imagem+Indisponível'">
-            <div class="exercise-info">
-                <h4 class="exercise-title">${ex.name}</h4>
-                <div class="exercise-badges">
-                    <span class="badge"><i class="ri-focus-3-line"></i> ${ex.target}</span>
-                    <span class="badge equip"><i class="ri-tools-line"></i> ${ex.equipment}</span>
-                </div>
-                <button class="btn btn-primary btn-small w-100" onclick="addExerciseToWorkout('${safeName}')">Adicionar ao Treino</button>
-            </div>
-        `;
-
-        resultsContainer.appendChild(card);
-    });
-}
-
-async function addExerciseToWorkout(exerciseName, gifUrl) {
-    // Buscar Sugestão de Carga Inteligente (Progressão)
-    const suggestionInfo = await calculateExerciseSuggestion(exerciseName);
-
-    // Adiciona o exercício na lista global de criação
-    currentRoutineExercises.push({
-        id: Date.now().toString(), // id temporário único
-        name: exerciseName,
-        gifUrl: gifUrl,
-        sets: 3,
-        reps: 10,
-        weight: suggestionInfo.suggestedWeight,
-        rest: 60,
-        suggestionText: suggestionInfo.message
-    });
-
-    // Mostra contador na tela de busca
-    const badgeBtn = document.getElementById('btn-finish-search');
-    const badgeCount = document.getElementById('search-badge-count');
-    if (badgeBtn) badgeBtn.style.display = 'inline-flex';
-    if (badgeCount) badgeCount.textContent = currentRoutineExercises.length;
-
-    // Feedback visual rápido
-    alert(`"${exerciseName}" adicionado à lista!\n(Já temos ${currentRoutineExercises.length} exercícios).`);
-
-    // Re-renderiza a lista da tela de rotina de treinos invisívelmente
-    renderRoutineList();
-}
-
-// ==== LÓGICA DE CRIAÇÃO DE TREINO COM EXERCÍCIOS ====
-let currentRoutineExercises = [];
-
-function renderRoutineList() {
-    const listContainer = document.getElementById('routine-exercise-list');
-    const emptyState = document.getElementById('routine-empty-state');
-    const saveBtn = document.getElementById('btn-save-routine');
-
-    // Limpa estado vazio inicial
-    listContainer.innerHTML = '';
-
-    if (currentRoutineExercises.length === 0) {
-        if (emptyState) listContainer.appendChild(emptyState);
-        if (saveBtn) saveBtn.style.display = 'none';
-
-        // Reset search badge se existir
-        const badgeBtn = document.getElementById('btn-finish-search');
-        if (badgeBtn) badgeBtn.style.display = 'none';
-        return;
-    }
-
-    if (saveBtn) saveBtn.style.display = 'block';
-
-    // Itera e cria cards customizáveis
-    currentRoutineExercises.forEach((ex, index) => {
-        const card = document.createElement('div');
-        card.className = 'card form-card';
-        card.style.padding = '1rem';
-        card.style.position = 'relative';
-
-        card.innerHTML = `
-            <div style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--surface-light);">
-                <img src="${ex.gifUrl}" style="width: 70px; height: 70px; border-radius: 8px; object-fit: cover; background: #fff;">
-                <div style="flex: 1;">
-                    <h5 style="text-transform: capitalize; margin-bottom: 0.3rem; font-size: 1.05rem;">${ex.name}</h5>
-                    <button class="btn btn-small btn-outline text-danger" style="border: none; padding: 0; height: auto;" onclick="removeRoutineExercise('${ex.id}')">
-                        <i class="ri-delete-bin-line"></i> Remover
-                    </button>
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">Séries</label>
-                    <input type="number" min="1" value="${ex.sets}" onchange="updateRoutineEx('${ex.id}', 'sets', this.value)" style="padding: 0.5rem;" class="form-control">
-                </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">Repetições</label>
-                    <input type="number" min="1" value="${ex.reps}" onchange="updateRoutineEx('${ex.id}', 'reps', this.value)" style="padding: 0.5rem;" class="form-control">
-                </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">Peso (kg)</label>
-                    <input type="number" min="0" value="${ex.weight}" onchange="updateRoutineEx('${ex.id}', 'weight', this.value)" style="padding: 0.5rem;" class="form-control">
-                    <small style="display:block; color:var(--primary-color); font-size: 0.70rem; margin-top: 0.2rem; line-height: 1.1;">${ex.suggestionText}</small>
-                </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">Descanso (seg) 
-                        <span style="color:var(--primary-color); cursor:pointer; font-size:0.75rem; font-weight:bold;" onclick="startRestTimer(${ex.rest})"><i class="ri-play-circle-line"></i> Testar Timer</span>
-                    </label>
-                    <input type="number" min="0" value="${ex.rest}" onchange="updateRoutineEx('${ex.id}', 'rest', this.value)" style="padding: 0.5rem;" class="form-control">
-                </div>
-            </div>
-        `;
-
-        listContainer.appendChild(card);
-    });
-}
-
-function updateRoutineEx(id, field, value) {
-    const exIndex = currentRoutineExercises.findIndex(e => e.id === id);
-    if (exIndex > -1) {
-        currentRoutineExercises[exIndex][field] = parseInt(value, 10) || 0;
-    }
-}
-
-function removeRoutineExercise(id) {
-    currentRoutineExercises = currentRoutineExercises.filter(e => e.id !== id);
-    renderRoutineList();
-
-    // Oculta badge na busca se esvaziar
-    const badgeBtn = document.getElementById('btn-finish-search');
-    if (badgeBtn) {
-        if (currentRoutineExercises.length === 0) {
-            badgeBtn.style.display = 'none';
-        } else {
-            document.getElementById('search-badge-count').textContent = currentRoutineExercises.length;
-        }
-    }
-}
-
-async function saveRoutine() {
-    const name = document.getElementById('routine-name').value.trim();
-    if (!name) {
-        alert("Por favor, digite um nome para a rotina de treino.");
-        return;
-    }
-
-    if (currentRoutineExercises.length === 0) {
-        alert("Sua rotina precisa ter ao menos um exercício.");
-        return;
-    }
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) {
-        alert("Você precisa estar logado.");
-        return;
-    }
-
-    const saveBtn = document.getElementById('btn-save-routine');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Salvando no Banco...';
-
-    try {
-        // 1. Inserir na tabela Pai (workouts)
-        const { data: workoutData, error: workoutError } = await supabaseClient
-            .from('workouts')
-            .insert({
-                user_id: session.user.id,
-                name: name,
-                calorias_final: 0 // Rotina não gera calorias ao ser CRIADA, só ao ser EXECUTADA
-            })
-            .select()
-            .single();
-
-        if (workoutError) throw workoutError;
-        const newWorkoutId = workoutData.id;
-
-        // 2. Prepara os exercícios para a tabela Filha (workout_exercises)
-        for (let i = 0; i < currentRoutineExercises.length; i++) {
-            const exInfo = currentRoutineExercises[i];
-
-            const { data: exerciseData, error: exerciseError } = await supabaseClient
-                .from('workout_exercises')
-                .insert({
-                    workout_id: newWorkoutId,
-                    exercise_name: exInfo.name,
-                    sets: exInfo.sets,
-                    reps: exInfo.reps,
-                    weight: exInfo.weight,
-                    rest_seconds: exInfo.rest,
-                    order_index: i
-                })
-                .select()
-                .single();
-
-            if (exerciseError) throw exerciseError;
-            const newExerciseId = exerciseData.id;
-
-            // 3. Opcional agora mas já vital pra arquitetura (Tabela Neta = exercise_sets)
-            // Gera as linhas baseadas no numero de 'sets' escolhido pelo usuario.
-            let setsToInsert = [];
-            for (let s = 1; s <= exInfo.sets; s++) {
-                setsToInsert.push({
-                    workout_exercise_id: newExerciseId,
-                    set_number: s,
-                    reps: exInfo.reps,
-                    weight: exInfo.weight,
-                    completed: false
-                });
-            }
-
-            // Inserção em massa array de sets
-            if (setsToInsert.length > 0) {
-                const { error: setsError } = await supabaseClient
-                    .from('exercise_sets')
-                    .insert(setsToInsert);
-
-                if (setsError) throw setsError;
-            }
-        }
-
-        // Sucesso
-        alert(`A ficha de treino "${name}" foi criada e registrada com sucesso no seu Histórico!`);
-
-        // Limpar fila e retornar
-        currentRoutineExercises = [];
-        document.getElementById('routine-name').value = '';
-        renderRoutineList();
-
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Salvar Ficha de Treino';
-
-        navigate('dashboard');
-
-    } catch (error) {
-        console.error("Erro ao salvar rotina: ", error);
-        alert("Erro no banco de dados ao salvar a ficha: " + error.message);
-
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Salvar Ficha de Treino';
-    }
-}
-
-// ==== TIMER DE DESCANSO AUTOMÁTICO ====
-let restInterval = null;
-
-function startRestTimer(secondsToRest) {
-    if (!secondsToRest || secondsToRest <= 0) return;
-
-    // Mostra o Modal
-    const timerModal = document.getElementById('rest-timer-modal');
-    const displayTime = document.getElementById('timer-display-time');
-    const statusText = document.getElementById('timer-status-text');
-    const timerIcon = timerModal.querySelector('.timer-icon');
-
-    timerModal.style.display = 'flex';
-    timerModal.classList.remove('finished');
-    statusText.textContent = 'Descanso';
-    timerIcon.className = 'ri-timer-flash-line timer-icon';
-    displayTime.textContent = secondsToRest;
-
-    let currentSeconds = secondsToRest;
-
-    // Limpa se houver um rodando (embora o modal bloqueie cliques de sobra)
-    if (restInterval) clearInterval(restInterval);
-
-    restInterval = setInterval(() => {
-        currentSeconds--;
-
-        if (currentSeconds > 0) {
-            displayTime.textContent = currentSeconds;
-        } else {
-            // Acabou o tempo
-            clearInterval(restInterval);
-            displayTime.textContent = '0';
-            statusText.textContent = 'Pronto para próxima série!';
-            timerModal.classList.add('finished');
-            timerIcon.className = 'ri-check-double-line timer-icon';
-
-            // Auto fecha depois de mostrar que concluiu por 3 segs
-            setTimeout(() => {
-                skipRestTimer();
-            }, 3000);
-
-            // Tenta vibrar se for num mobile compativel
-            if (navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
-            }
-        }
-    }, 1000);
-}
-
-function skipRestTimer() {
-    const timerModal = document.getElementById('rest-timer-modal');
-    timerModal.style.display = 'none';
-
-    if (restInterval) {
-        clearInterval(restInterval);
-        restInterval = null;
-    }
-}
-
-// ==== TELA DE PROGRESSO (GRÁFICOS CHART.JS) ====
-let progressChartInstance = null;
-
-async function loadProgressExercises() {
-    const selectEl = document.getElementById('progress-exercise-select');
-    if (!selectEl) return;
-
-    selectEl.innerHTML = '<option value="">Carregando exercícios...</option>';
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) return;
-
-    try {
-        // Tenta buscar da tabela "workout_exercises" real atrelada ao UID se existir e estiver preenchida.
-        // Como o usuário pode não ter logado nada no database ainda, usamos um fetch mock se vier 0.
-
-        const { data: exercisesData, error } = await supabaseClient
-            .from('workout_exercises')
-            .select('exercise_name, workouts!inner(user_id)')
-            .eq('workouts.user_id', session.user.id);
-
-        let uniqueExercises = [];
-
-        if (exercisesData && exercisesData.length > 0) {
-            // Extrai nomes unicos do banco
-            const names = exercisesData.map(e => e.exercise_name);
-            uniqueExercises = [...new Set(names)];
-        } else {
-            // Simulando um retorno caso o usuário não tenha treinos preenchidos (pra visualizar a UI)
-            uniqueExercises = ['Supino Reto', 'Agachamento Livre', 'Remada Curvada'];
-        }
-
-        // Popula o select box
-        selectEl.innerHTML = '<option value="" disabled selected>Selecione um exercício...</option>';
-        uniqueExercises.forEach(exName => {
-            const opt = document.createElement('option');
-            opt.value = exName;
-            opt.textContent = exName;
-            selectEl.appendChild(opt);
-        });
-
-    } catch (e) {
-        console.error("Erro renderizando exercícios progressos", e);
-        selectEl.innerHTML = '<option value="">Erro ao carregar.</option>';
-    }
-}
-
-async function renderProgressChart() {
-    const selectEl = document.getElementById('progress-exercise-select');
-    const selectedExercise = selectEl.value;
-    const emptyState = document.getElementById('progress-empty-state');
-    const canvasContainer = document.getElementById('progressChart').parentNode;
-
-    if (!selectedExercise) return;
-
-    // Em um cénario real puxariamos da base: datas e pesos_medios em ordem cronológica
-    // Devido ao mock exigido pela ausência temporária do recurso rodando real "live",
-    // Criaremos os pontos aleatórios ascendentes para exibição visual do ChartJS.
-
-    const mockDates = [];
-    const mockWeights = [];
-    let baseWeight = Math.floor(Math.random() * 40) + 15; // 15kg ~ 55kg
-
-    // Gerando historico dos ultimos 6 treinos
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - (i * 7)); // um treino por semana pra tras
-        mockDates.push(d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
-
-        // Peso medio subindo aos poucos
-        mockWeights.push(baseWeight);
-        baseWeight += Math.floor(Math.random() * 3) + 1; // sobe 1~3kg a cada treino
-    }
-
-    canvasContainer.style.display = 'block';
-    emptyState.style.display = 'none';
-
-    plotChartJS(mockDates, mockWeights, selectedExercise);
-}
-
-function plotChartJS(labels, dataPoints, exerciseName) {
-    const ctx = document.getElementById('progressChart').getContext('2d');
-
-    // Destroi gráfico anterior pra ele não transpor na transição
-    if (progressChartInstance) {
-        progressChartInstance.destroy();
-    }
-
-    const isDarkTheme = document.body.getAttribute('data-theme') === 'light' ? false : true;
-    const textColor = isDarkTheme ? '#e2e8f0' : '#1e293b';
-    const gridColor = isDarkTheme ? '#334155' : '#e2e8f0';
-
-    progressChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Peso Médio (kg)',
-                data: dataPoints,
-                borderColor: '#10b981', // Sucesso Green
-                backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                borderWidth: 3,
-                pointBackgroundColor: '#0f172a',
-                pointBorderColor: '#10b981',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                fill: true,
-                tension: 0.3 // curva mais suave
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false // Nao precisa legenda ja q temos o titulo no tooltip e 1 linha so
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    titleColor: '#10b981',
-                    bodyColor: '#fff',
-                    padding: 10,
-                    displayColors: false,
-                    callbacks: {
-                        label: function (context) {
-                            return context.parsed.y + ' kg';
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    grid: {
-                        color: gridColor,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: textColor,
-                        padding: 10
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: textColor
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ==== CRONÔMETRO GLOBAL DO TREINO ====
-let globalWorkoutInterval = null;
-let globalWorkoutSeconds = 0;
-let currentActiveWorkoutId = null;
-
-function formatHHMMSS(totalSeconds) {
-    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-    const s = (totalSeconds % 60).toString().padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
-
-function startWorkoutGlobalTimer(workoutId) {
-    currentActiveWorkoutId = workoutId || null;
-    globalWorkoutSeconds = 0;
-
-    const globalBar = document.getElementById('global-workout-timer');
-    const timerText = document.getElementById('global-timer-text');
-
-    // Revela e Inicia
-    globalBar.classList.add('active');
-    timerText.textContent = "00:00:00";
-
-    if (globalWorkoutInterval) clearInterval(globalWorkoutInterval);
-
-    globalWorkoutInterval = setInterval(() => {
-        globalWorkoutSeconds++;
-        timerText.textContent = formatHHMMSS(globalWorkoutSeconds);
-    }, 1000);
-
-    // Ancorar direto na aba simulada pro usuário ver
-    navigate('active-workout');
-}
-
-async function finishWorkout() {
-    if (globalWorkoutInterval) clearInterval(globalWorkoutInterval);
-
-    const finalTimeString = formatHHMMSS(globalWorkoutSeconds);
-    const globalBar = document.getElementById('global-workout-timer');
-    globalBar.classList.remove('active');
-
-    // MOCK VIRTUAL MÍNIMO PRA ELE PODER TESTAR A UI APENAS:
-    // Em um cenário real de backend estendido aqui pegaríamos 'currentActiveWorkoutId' e 
-    // faríamos um UPDATE supabaseClient.from('workouts').update({duracao_real: finalTimeString})
-
-    alert(`👏 Treino Finalizado!\nDuração Oficial gravada: ${finalTimeString}`);
-
-    // Limpando o rastro
-    globalWorkoutSeconds = 0;
-    currentActiveWorkoutId = null;
-    navigate('dashboard');
-}
 
 // ==== MODO OFFLINE / SINCRONIZAÇÃO ====
 function saveWorkoutLocally(workoutData) {

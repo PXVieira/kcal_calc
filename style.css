@@ -243,6 +243,13 @@ select:focus {
     color: var(--primary-color);
     border: 2px solid var(--surface-light);
     cursor: pointer;
+    overflow: hidden;
+}
+
+.avatar-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .page-content {
@@ -394,56 +401,6 @@ select:focus {
     font-size: 1.1rem;
 }
 
-/* Exercise Card da API */
-.exercise-card {
-    background-color: var(--surface-color);
-    border-radius: var(--card-radius);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--surface-light);
-}
-
-.exercise-gif {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-    background-color: #fff;
-    /* Fundo branco pra não quebrar transparências do GIF */
-}
-
-.exercise-info {
-    padding: 1.25rem;
-}
-
-.exercise-title {
-    font-size: 1.15rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    text-transform: capitalize;
-}
-
-.exercise-badges {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.25rem;
-}
-
-.badge {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--primary-color);
-    padding: 0.3rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.badge.equip {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3B82F6;
-}
 
 /* Novo Treino */
 .intensity-group {
@@ -537,6 +494,13 @@ select:focus {
     font-size: 3rem;
     color: var(--text-muted);
     margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .settings-item {
@@ -611,127 +575,7 @@ select:focus {
     color: var(--primary-color);
 }
 
-.nav-item.fab {
-    position: relative;
-    top: -24px;
-}
 
-.fab-inner {
-    width: 64px;
-    height: 64px;
-    background-color: var(--primary-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Barra do Cronometro Global */
-.global-timer-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
-    border-bottom: 2px solid var(--primary-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.5rem;
-    z-index: 10000;
-    /* Fica acima de quase tudo, exceto timer modal */
-    transform: translateY(-100%);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-}
-
-.global-timer-bar.active {
-    transform: translateY(0);
-}
-
-.timer-display-small {
-    color: var(--primary-color);
-    font-size: 1.5rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    display: flex;
-    align-items: center;
-}
-
-@keyframes pulse {
-    0% {
-        opacity: 1;
-        text-shadow: 0 0 5px var(--primary-color);
-    }
-
-    50% {
-        opacity: 0.5;
-        text-shadow: none;
-    }
-
-    100% {
-        opacity: 1;
-        text-shadow: 0 0 5px var(--primary-color);
-    }
-}
-
-/* Modal de Descanso (Timer) */
-.timer-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    animation: fadeIn 0.3s ease;
-}
-
-.timer-content {
-    background: var(--surface-color);
-    padding: 3rem 2rem;
-    border-radius: 32px;
-    text-align: center;
-    width: 90%;
-    max-width: 340px;
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-}
-
-.timer-icon {
-    font-size: 3rem;
-    color: var(--primary-color);
-    display: block;
-    margin-bottom: 0.5rem;
-}
-
-.timer-display {
-    font-size: 6rem;
-    font-weight: 800;
-    line-height: 1;
-    color: var(--text-main);
-    margin: 1.5rem 0;
-    font-variant-numeric: tabular-nums;
-}
-
-.timer-modal.finished .timer-display {
-    color: var(--primary-color);
-}
-
-.timer-modal.finished .timer-icon {
-    color: var(--primary-color);
-}
-
-.fab-inner i {
-    font-size: 2rem;
-}
 
 /* Banner Offline */
 .offline-banner {
@@ -768,4 +612,29 @@ select:focus {
 
 body.offline .offline-banner {
     display: flex;
+}
+
+/* Active Workout Styles */
+.active-header {
+    background: var(--bg-color);
+    border-bottom: 2px solid var(--surface-light);
+}
+
+.active-ex-card {
+    transition: all 0.2s ease;
+    border-left: 4px solid var(--primary-color);
+}
+
+.active-ex-card.completed {
+    border-left-color: #10b981;
+}
+
+.active-ex-card input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#active-timer-display {
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
 }

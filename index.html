@@ -19,7 +19,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- PWA Manifest -->
+    <link rel="icon" href="data:,">
     <link rel="manifest" href="manifest.json">
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
@@ -61,10 +63,10 @@
             <header class="app-header">
                 <div class="header-content">
                     <div>
-                        <h2>Olá, Atleta 👋</h2>
+                        <h2 id="welcome-message">Olá, Atleta 👋</h2>
                         <p>Pronto para o treino de hoje?</p>
                     </div>
-                    <div class="avatar-placeholder" onclick="navigate('profile')">
+                    <div class="avatar-placeholder" id="header-avatar" onclick="navigate('profile')">
                         <i class="ri-user-fill"></i>
                     </div>
                 </div>
@@ -85,15 +87,6 @@
                             <span class="stat-label">Treinos/Semana</span>
                         </div>
                     </div>
-                </div>
-
-                <h3 class="section-title">Ação Rápida</h3>
-                <div class="action-card" onclick="navigate('create-workout')">
-                    <div class="action-content">
-                        <h4>Criar Ficha de Treino</h4>
-                        <p>Monte seu treino personalizado</p>
-                    </div>
-                    <button class="btn-icon"><i class="ri-add-line"></i></button>
                 </div>
 
                 <div class="action-card mt-1" onclick="navigate('new-workout')"
@@ -270,75 +263,13 @@
                     </div>
                 </div>
 
-                <button class="btn btn-outline text-danger w-100 mt-2" onclick="deleteWorkout()"
-                    style="border-color: var(--danger-color); color: var(--danger-color);">Excluir Registro</button>
-            </main>
-        </section>
-
-        <!-- VIEW: CRIAR TREINO (NOVA FICHA) -->
-        <section id="create-workout-view" class="view">
-            <header class="app-header minimal">
-                <button class="btn-back" onclick="navigate('dashboard')"><i class="ri-arrow-left-s-line"></i></button>
-                <h2>Criar Treino</h2>
-            </header>
-            <main class="page-content">
-                <div class="form-group mb-2">
-                    <label>Nome do Treino</label>
-                    <input type="text" id="routine-name" placeholder="Ex: Treino A - Costas e Bíceps"
-                        class="form-control">
-                </div>
-
-                <div class="section-header"
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 class="section-title" style="margin: 0;">Exercícios</h3>
-                    <button class="btn btn-outline btn-small" onclick="navigate('exercise-search')"
-                        style="border-color: var(--primary-color); color: var(--primary-color);"><i
-                            class="ri-add-line"></i> Adicionar</button>
-                </div>
-
-                <div id="routine-exercise-list" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <!-- Exercícios escolhidos via API renderizam aqui -->
-                    <div class="text-center text-muted" id="routine-empty-state"
-                        style="margin-top: 1rem; padding: 2rem 0; border: 1px dashed var(--surface-light); border-radius: var(--card-radius);">
-                        <i class="ri-file-list-3-line"
-                            style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: var(--surface-light)"></i>
-                        Nenhum exercício adicionado.<br>Clique em "Adicionar" para buscar.
-                    </div>
-                </div>
-
-                <button class="btn btn-primary w-100 mt-2" onclick="saveRoutine()" style="display: none;"
-                    id="btn-save-routine">Salvar Ficha de Treino</button>
-            </main>
-        </section>
-
-        <!-- VIEW: BUSCA DE EXERCÍCIOS API -->
-        <!-- VIEW: BUSCA DE EXERCÍCIOS API -->
-        <section id="exercise-search-view" class="view">
-            <header class="app-header minimal">
-                <button class="btn-back" onclick="navigate('create-workout')"><i
-                        class="ri-arrow-left-s-line"></i></button>
-                <h2 style="flex: 1;">Buscar API</h2>
-                <button class="btn btn-primary btn-small" onclick="navigate('create-workout')" id="btn-finish-search"
-                    style="display: none;">Concluir <span id="search-badge-count"
-                        style="margin-left: 0.3rem; background: #fff; color: var(--primary-color); border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">0</span></button>
-            </header>
-            <main class="page-content">
-                <div class="form-group" style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="text" id="exercise-search-input" placeholder="Termo em inglês (ex: squat, bench)"
-                        class="form-control" style="margin-bottom: 0;">
-                    <button class="btn btn-primary" onclick="handleExerciseSearch()"
-                        style="height: 56px; padding: 0 1.5rem;"><i class="ri-search-line"></i></button>
-                </div>
-
-                <div id="exercise-results" class="mt-2" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <div class="text-center text-muted" style="margin-top: 2rem;">
-                        <i class="ri-search-eye-line"
-                            style="font-size: 2.5rem; color: var(--surface-light); margin-bottom: 0.5rem; display: block;"></i>
-                        Digite um termo para buscar (inglês recomendado).
-                    </div>
+                <div style="padding: 0 1.25rem;">
+                    <button class="btn btn-outline btn-large text-danger w-100 mt-2" onclick="deleteWorkout()"
+                        style="border-color: var(--danger); color: var(--danger);">Excluir Registro</button>
                 </div>
             </main>
         </section>
+
 
         <!-- VIEW: PERFIL -->
         <section id="profile-view" class="view">
@@ -347,12 +278,25 @@
             </header>
             <main class="page-content">
                 <div class="profile-header card">
-                    <div class="avatar-large"><i class="ri-user-fill"></i></div>
-                    <h3 id="profile-email-display">Carregando...</h3>
+                    <div class="avatar-large" id="profile-avatar-display"><i class="ri-user-fill"></i></div>
+                    <h3 id="profile-name-display">Carregando...</h3>
+                    <p id="profile-email-display" style="font-size: 0.9rem; color: var(--text-muted);"></p>
                 </div>
 
                 <div class="form-card card mt-2" id="profile-form">
-                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Dados Corporais</h4>
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Informações Pessoais</h4>
+
+                    <div class="form-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="profile-nome" placeholder="Seu nome" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>URL da Foto de Perfil</label>
+                        <input type="url" id="profile-avatar-url" placeholder="https://exemplo.com/suafoto.jpg" class="form-control">
+                    </div>
+
+                    <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; color: var(--primary-color);">Dados Corporais</h4>
 
                     <div class="form-group">
                         <label>Idade</label>
@@ -413,69 +357,8 @@
             </main>
         </section>
 
-        <!-- VIEW: PROGRESSO (GRÁFICOS) -->
-        <section id="progress-view" class="view">
-            <header class="app-header">
-                <h2>Progresso</h2>
-            </header>
-            <main class="page-content">
-                <div class="card form-card mb-2">
-                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Evolução de Cargas</h4>
-                    <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
-                        Selecione um exercício que você já realizou para ver seu histórico de peso médio.
-                    </p>
 
-                    <div class="form-group">
-                        <select id="progress-exercise-select" class="form-control" onchange="renderProgressChart()">
-                            <option value="">Carregando exercícios...</option>
-                        </select>
-                    </div>
 
-                    <!-- Container do Gráfico -->
-                    <div style="position: relative; height: 300px; width: 100%; margin-top: 1.5rem;">
-                        <canvas id="progressChart"></canvas>
-                    </div>
-
-                    <div id="progress-empty-state" class="text-center text-muted mt-2"
-                        style="display: none; padding: 2rem 0;">
-                        <i class="ri-bar-chart-2-line" style="font-size: 3rem; opacity: 0.5;"></i>
-                        <p class="mt-1">Nenhum dado encontrado para este exercício.</p>
-                    </div>
-                </div>
-            </main>
-        </section>
-
-        <!-- VIEW: TREINO ATIVO (CRONÔMETRO) -->
-        <section id="active-workout-view" class="view" style="padding-top: 80px;">
-            <main class="page-content"
-                style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
-                <div class="card form-card" style="width: 100%; max-width: 400px; padding: 2rem;">
-                    <i class="ri-fire-fill"
-                        style="font-size: 4rem; color: var(--primary-color); display: block; margin-bottom: 1rem;"></i>
-                    <h3 style="margin-bottom: 0.5rem;">Treino em Andamento</h3>
-                    <p class="text-muted" style="margin-bottom: 2rem;">Seu cronômetro está rodando. Registre suas séries
-                        e, quando finalizar tudo, clique no botão abaixo.</p>
-
-                    <button class="btn btn-primary btn-large w-100" onclick="finishWorkout()"
-                        style="background-color: var(--danger-color); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
-                        <i class="ri-flag-2-line"></i> Finalizar Treino
-                    </button>
-                    <button class="btn btn-outline w-100 mt-1" onclick="navigate('dashboard')">Minimizar Tela</button>
-                </div>
-            </main>
-        </section>
-
-        <!-- BARRA DO CRONÔMETRO GLOBAL (INVISIVEL POR PADRAO) -->
-        <div id="global-workout-timer" class="global-timer-bar">
-            <div class="timer-display-small">
-                <i class="ri-timer-line" style="margin-right:0.5rem; animation: pulse 2s infinite;"></i>
-                <span id="global-timer-text">00:00:00</span>
-            </div>
-            <button class="btn btn-small" onclick="navigate('active-workout')"
-                style="background: rgba(255,255,255,0.2); color:white; border:none;">
-                <i class="ri-fullscreen-line"></i> Ver
-            </button>
-        </div>
 
         <!-- BOTTOM NAVIGATION -->
         <nav id="bottom-nav" class="bottom-nav hidden">
@@ -485,16 +368,11 @@
             <button class="nav-item" onclick="navigate('history', this)">
                 <i class="ri-history-line"></i><span>Histórico</span>
             </button>
-            <button class="nav-item fab" onclick="navigate('new-workout')">
-                <div class="fab-inner"><i class="ri-add-line"></i></div>
-            </button>
-            <button class="nav-item" onclick="navigate('progress', this)">
-                <i class="ri-line-chart-line"></i><span>Progresso</span>
-            </button>
             <button class="nav-item" onclick="navigate('profile', this)">
                 <i class="ri-user-3-line"></i><span>Perfil</span>
             </button>
         </nav>
+
 
         <!-- Timer Overlay Modal -->
         <div id="rest-timer-modal" class="timer-modal" style="display: none;">
