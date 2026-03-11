@@ -212,15 +212,40 @@ function updateAvatarUI(url) {
     
     if (url) {
         const imgHeader = `<img src="${url}" alt="Avatar">`;
-        const imgProfile = `<img src="${url}" alt="Avatar">`;
+        const imgProfile = `<img src="${url}" alt="Avatar">
+                           <div class="avatar-edit-badge"><i class="ri-camera-line"></i></div>`;
         
         if (headerAvatar) headerAvatar.innerHTML = imgHeader;
         if (profileAvatar) profileAvatar.innerHTML = imgProfile;
     } else {
         const icon = '<i class="ri-user-fill"></i>';
         if (headerAvatar) headerAvatar.innerHTML = icon;
-        if (profileAvatar) profileAvatar.innerHTML = icon;
+        if (profileAvatar) profileAvatar.innerHTML = `${icon}<div class="avatar-edit-badge"><i class="ri-camera-line"></i></div>`;
     }
+}
+
+let pendingAvatarFile = null;
+
+function handleAvatarSelection(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validação de tamanho (500KB = 500 * 1024 bytes)
+    const MAX_SIZE = 500 * 1024;
+    if (file.size > MAX_SIZE) {
+        alert("A imagem é muito grande. O limite máximo é de 500KB.");
+        event.target.value = ""; // Limpa o input
+        return;
+    }
+
+    pendingAvatarFile = file;
+
+    // Gerar preview local
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        updateAvatarUI(e.target.result);
+    };
+    reader.readAsDataURL(file);
 }
 
 async function saveProfile() {
@@ -231,7 +256,39 @@ async function saveProfile() {
     if (!session) return;
 
     const nome_completo = document.getElementById('profile-nome').value || null;
-    const avatar_url = document.getElementById('profile-avatar-url').value || null;
+    let avatar_url = document.getElementById('profile-avatar-url').value || null;
+
+    // Fazer upload da imagem se houver arquivo pendente
+    if (pendingAvatarFile) {
+        const fileExt = pendingAvatarFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${session.user.id}/${fileName}`;
+
+        msgDiv.style.display = 'block';
+        msgDiv.textContent = "Fazendo upload da imagem...";
+        msgDiv.style.color = "var(--text-muted)";
+
+        const { data: uploadData, error: uploadError } = await supabaseClient
+            .storage
+            .from('profiles')
+            .upload(filePath, pendingAvatarFile);
+
+        if (uploadError) {
+            console.error("Erro no upload:", uploadError);
+            msgDiv.className = "text-danger text-center mt-1";
+            msgDiv.textContent = "Erro ao subir imagem: " + uploadError.message;
+            return;
+        }
+
+        const { data: { publicUrl } } = supabaseClient
+            .storage
+            .from('profiles')
+            .getPublicUrl(filePath);
+        
+        avatar_url = publicUrl;
+        pendingAvatarFile = null; // Limpa após o upload
+    }
+
     const idade = parseInt(document.getElementById('profile-idade').value) || null;
     const sexo = document.getElementById('profile-sexo').value || null;
     const altura = parseFloat(document.getElementById('profile-altura').value) || null;

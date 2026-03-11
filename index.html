@@ -278,7 +278,10 @@
             </header>
             <main class="page-content">
                 <div class="profile-header card">
-                    <div class="avatar-large" id="profile-avatar-display"><i class="ri-user-fill"></i></div>
+                    <div class="avatar-large" id="profile-avatar-display" onclick="document.getElementById('profile-avatar-file').click()" style="cursor: pointer; position: relative;">
+                        <i class="ri-user-fill"></i>
+                        <div class="avatar-edit-badge"><i class="ri-camera-line"></i></div>
+                    </div>
                     <h3 id="profile-name-display">Carregando...</h3>
                     <p id="profile-email-display" style="font-size: 0.9rem; color: var(--text-muted);"></p>
                 </div>
@@ -292,8 +295,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label>URL da Foto de Perfil</label>
-                        <input type="url" id="profile-avatar-url" placeholder="https://exemplo.com/suafoto.jpg" class="form-control">
+                        <label>Foto de Perfil (Máx 500KB)</label>
+                        <input type="file" id="profile-avatar-file" accept="image/*" class="form-control" style="display: none;" onchange="handleAvatarSelection(event)">
+                        <button class="btn btn-outline w-100" onclick="document.getElementById('profile-avatar-file').click()">
+                            <i class="ri-upload-2-line"></i> Escolher Imagem
+                        </button>
+                        <input type="hidden" id="profile-avatar-url">
                     </div>
 
                     <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; color: var(--primary-color);">Dados Corporais</h4>
